@@ -1,0 +1,891 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>단타왕 종베 매매기록</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans KR", "Malgun Gothic", sans-serif;
+    background: #f4f6fa;
+    color: #1d2433;
+    padding: 24px;
+    min-height: 100vh;
+  }
+  .container { max-width: 1400px; margin: 0 auto; }
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 24px;
+    padding-bottom: 16px;
+    border-bottom: 2px solid #e3e7ef;
+  }
+  h1 { font-size: 24px; font-weight: 700; color: #1d2433; }
+  .subtitle { color: #6b7280; font-size: 13px; margin-top: 4px; }
+  .stats {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  .stat-box {
+    background: #fff;
+    padding: 10px 16px;
+    border-radius: 10px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    min-width: 100px;
+  }
+  .stat-label { font-size: 11px; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px; }
+  .stat-value { font-size: 18px; font-weight: 700; margin-top: 2px; }
+  .stat-value.plus { color: #d9534f; }
+  .stat-value.minus { color: #1e5aa8; }
+
+  .card {
+    background: #fff;
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.04);
+  }
+  .card h2 {
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .card h2 .badge {
+    background: #eef2ff;
+    color: #4f46e5;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 11px;
+    font-weight: 500;
+  }
+
+  /* Upload Section */
+  .upload-row {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  .file-upload-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    background: #4f46e5;
+    color: #fff;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    transition: background 0.15s;
+  }
+  .file-upload-label:hover { background: #4338ca; }
+  .file-upload-label input[type=file] { display: none; }
+  .btn {
+    padding: 9px 14px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 500;
+    transition: all 0.15s;
+    font-family: inherit;
+  }
+  .btn-secondary { background: #e5e7eb; color: #374151; }
+  .btn-secondary:hover { background: #d1d5db; }
+  .btn-danger { background: #fee2e2; color: #b91c1c; }
+  .btn-danger:hover { background: #fecaca; }
+  .btn-success { background: #10b981; color: #fff; }
+  .btn-success:hover { background: #059669; }
+  .btn-primary { background: #4f46e5; color: #fff; }
+  .btn-primary:hover { background: #4338ca; }
+
+  /* Form */
+  .form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 14px;
+  }
+  .form-group { display: flex; flex-direction: column; }
+  .form-group.full { grid-column: 1 / -1; }
+  label {
+    font-size: 12px;
+    font-weight: 600;
+    color: #4b5563;
+    margin-bottom: 6px;
+  }
+  label .req { color: #ef4444; }
+  input[type=text], input[type=date], input[type=number], textarea, select {
+    padding: 9px 12px;
+    border: 1.5px solid #e5e7eb;
+    border-radius: 8px;
+    font-size: 14px;
+    font-family: inherit;
+    background: #fff;
+    transition: border-color 0.15s;
+    width: 100%;
+  }
+  input:focus, textarea:focus, select:focus {
+    outline: none;
+    border-color: #4f46e5;
+  }
+  textarea { resize: vertical; min-height: 80px; }
+
+  .photo-upload {
+    border: 2px dashed #d1d5db;
+    border-radius: 8px;
+    padding: 18px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.15s;
+    background: #f9fafb;
+  }
+  .photo-upload:hover { border-color: #4f46e5; background: #f5f5ff; }
+  .photo-upload.dragover { border-color: #4f46e5; background: #eef2ff; }
+  .photo-upload p { color: #6b7280; font-size: 13px; margin: 4px 0; }
+  .photo-upload input[type=file] { display: none; }
+  .photo-preview {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 12px;
+  }
+  .photo-item {
+    position: relative;
+    width: 80px;
+    height: 80px;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid #e5e7eb;
+  }
+  .photo-item img { width: 100%; height: 100%; object-fit: cover; }
+  .photo-item .remove-photo {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    background: rgba(0,0,0,0.65);
+    color: #fff;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    border: none;
+    cursor: pointer;
+    font-size: 11px;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .form-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 16px;
+  }
+
+  /* Table */
+  .table-wrapper { overflow-x: auto; }
+  .filter-row {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 14px;
+    align-items: center;
+  }
+  .filter-row input { max-width: 260px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  thead th {
+    background: #f3f4f6;
+    padding: 10px 12px;
+    text-align: left;
+    font-weight: 600;
+    color: #374151;
+    border-bottom: 2px solid #e5e7eb;
+    white-space: nowrap;
+    font-size: 12px;
+  }
+  tbody td {
+    padding: 12px;
+    border-bottom: 1px solid #f1f2f6;
+    vertical-align: top;
+    line-height: 1.5;
+  }
+  tbody tr:hover { background: #fafbff; }
+  .col-date { width: 90px; min-width: 90px; }
+  .col-stock { width: 110px; min-width: 110px; font-weight: 600; }
+  .col-realized { width: 80px; min-width: 80px; text-align: right; }
+  .col-weight { width: 80px; min-width: 80px; }
+  .col-time { width: 110px; min-width: 110px; }
+  .col-actions { width: 80px; min-width: 80px; }
+  .realized.plus { color: #d9534f; font-weight: 600; }
+  .realized.minus { color: #1e5aa8; font-weight: 600; }
+  .cell-content { max-width: 320px; word-wrap: break-word; white-space: pre-wrap; }
+
+  .photo-thumbs {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+    margin-top: 6px;
+  }
+  .photo-thumbs img {
+    width: 48px; height: 48px;
+    object-fit: cover;
+    border-radius: 6px;
+    cursor: pointer;
+    border: 1px solid #e5e7eb;
+  }
+  .empty-state {
+    text-align: center;
+    padding: 40px 20px;
+    color: #9ca3af;
+  }
+
+  /* Modal */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.8);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  .modal-overlay.active { display: flex; }
+  .modal-overlay img {
+    max-width: 90%;
+    max-height: 90vh;
+    border-radius: 8px;
+  }
+  .modal-close {
+    position: absolute;
+    top: 20px; right: 24px;
+    background: #fff;
+    width: 40px; height: 40px;
+    border-radius: 50%;
+    border: none;
+    cursor: pointer;
+    font-size: 20px;
+    font-weight: bold;
+  }
+
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    background: #1d2433;
+    color: #fff;
+    padding: 12px 18px;
+    border-radius: 8px;
+    font-size: 14px;
+    opacity: 0;
+    transform: translateY(10px);
+    transition: all 0.2s;
+    z-index: 2000;
+    pointer-events: none;
+  }
+  .toast.show { opacity: 1; transform: translateY(0); }
+
+  @media (max-width: 768px) {
+    body { padding: 12px; }
+    .form-grid { grid-template-columns: 1fr 1fr; }
+    .stats { width: 100%; }
+    thead { display: none; }
+    tbody td { display: block; border-bottom: none; padding: 4px 0; }
+    tbody tr { display: block; padding: 12px; border-bottom: 1px solid #f1f2f6; }
+    tbody td::before { content: attr(data-label) ": "; font-weight: 600; color: #6b7280; font-size: 11px; }
+    .col-date, .col-stock, .col-realized, .col-weight, .col-time, .col-actions { width: auto; min-width: auto; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <div>
+      <h1>📈 단타왕 종베 매매기록</h1>
+      <div class="subtitle">엑셀 업로드 · 사진 첨부 · 빠른 기록</div>
+    </div>
+    <div class="stats">
+      <div class="stat-box">
+        <div class="stat-label">건수</div>
+        <div class="stat-value" id="stat-count">0</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-label">누적 실현(만)</div>
+        <div class="stat-value" id="stat-total">0</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-label">승률</div>
+        <div class="stat-value" id="stat-winrate">-</div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Excel Upload Card -->
+  <div class="card">
+    <h2>📁 엑셀 업로드 <span class="badge">기존 엑셀 데이터 가져오기</span></h2>
+    <div class="upload-row">
+      <label class="file-upload-label">
+        <span>📤 엑셀 파일 선택 (.xlsx)</span>
+        <input type="file" id="excel-upload" accept=".xlsx,.xls" />
+      </label>
+      <button class="btn btn-success" onclick="exportToExcel()">💾 엑셀로 내보내기</button>
+      <button class="btn btn-secondary" onclick="exportJSON()">JSON 백업</button>
+      <label class="btn btn-secondary" style="display:inline-block">
+        JSON 복원
+        <input type="file" id="json-upload" accept=".json" style="display:none" />
+      </label>
+      <button class="btn btn-danger" onclick="clearAll()">🗑 전체 삭제</button>
+      <span id="upload-status" style="color:#6b7280; font-size:13px;"></span>
+    </div>
+  </div>
+
+  <!-- Form Card -->
+  <div class="card">
+    <h2>✏️ 새 매매 기록 <span class="badge" id="form-mode-badge">추가</span></h2>
+    <form id="trade-form">
+      <div class="form-grid">
+        <div class="form-group">
+          <label>날짜(매도기준) <span class="req">*</span></label>
+          <input type="text" id="f-date" placeholder="25.10.15" required />
+        </div>
+        <div class="form-group">
+          <label>종목 <span class="req">*</span></label>
+          <input type="text" id="f-stock" placeholder="삼성전자" required />
+        </div>
+        <div class="form-group">
+          <label>비중</label>
+          <input type="text" id="f-weight" placeholder="1.7억 / 6천 등" />
+        </div>
+        <div class="form-group">
+          <label>실현(만)</label>
+          <input type="number" id="f-realized" placeholder="-350" step="1" />
+        </div>
+        <div class="form-group">
+          <label>매수판단시점 / 매매 요약과정</label>
+          <input type="text" id="f-buytime" placeholder="1950-종가 / 15:30 종가 등" />
+        </div>
+        <div class="form-group full">
+          <label>발생시점 / 매매이유 (뉴스)</label>
+          <textarea id="f-reason" placeholder="발생시간, 뉴스 헤드라인, 매매 이유 등"></textarea>
+        </div>
+        <div class="form-group full">
+          <label>추가대응 (기존 추가대응 + 추추가대응 통합)</label>
+          <textarea id="f-action" placeholder="이후 추가 매매 대응 내역을 자유롭게 기록"></textarea>
+        </div>
+        <div class="form-group full">
+          <label>기타 Q (복기/코멘트)</label>
+          <textarea id="f-etc" placeholder="복기 질문, 메모, 인사이트"></textarea>
+        </div>
+        <div class="form-group full">
+          <label>📷 사진 첨부 (차트, 뉴스 캡처 등 복수 가능)</label>
+          <div class="photo-upload" id="photo-drop">
+            <p>📎 클릭 또는 드래그하여 이미지 업로드</p>
+            <p style="font-size:11px; color:#9ca3af;">PNG, JPG, GIF · 다중 선택 · 붙여넣기(Ctrl+V) 지원</p>
+            <input type="file" id="f-photos" accept="image/*" multiple />
+          </div>
+          <div class="photo-preview" id="photo-preview"></div>
+        </div>
+      </div>
+      <div class="form-actions">
+        <button type="button" class="btn btn-secondary" onclick="resetForm()">초기화</button>
+        <button type="submit" class="btn btn-primary" id="submit-btn">➕ 기록 추가</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Records Table Card -->
+  <div class="card">
+    <h2>📋 매매 기록 목록 <span class="badge" id="record-count-badge">0건</span></h2>
+    <div class="filter-row">
+      <input type="text" id="search-input" placeholder="🔍 종목/뉴스/이유 검색" />
+      <select id="sort-select">
+        <option value="date-desc">날짜 최신순</option>
+        <option value="date-asc">날짜 오래된순</option>
+        <option value="realized-desc">실현 높은순</option>
+        <option value="realized-asc">실현 낮은순</option>
+      </select>
+    </div>
+    <div class="table-wrapper">
+      <table id="records-table">
+        <thead>
+          <tr>
+            <th class="col-date">날짜</th>
+            <th class="col-stock">종목</th>
+            <th>발생시점 / 매매이유</th>
+            <th class="col-weight">비중</th>
+            <th class="col-realized">실현(만)</th>
+            <th class="col-time">매수판단시점</th>
+            <th>추가대응</th>
+            <th>기타Q · 사진</th>
+            <th class="col-actions">관리</th>
+          </tr>
+        </thead>
+        <tbody id="records-body"></tbody>
+      </table>
+    </div>
+    <div id="empty-state" class="empty-state" style="display:none;">
+      아직 기록이 없습니다. 엑셀을 업로드하거나 위에서 새 기록을 추가해보세요.
+    </div>
+  </div>
+</div>
+
+<!-- Modal for image view -->
+<div class="modal-overlay" id="image-modal" onclick="closeModal()">
+  <button class="modal-close" onclick="closeModal()">✕</button>
+  <img id="modal-img" src="" alt="" />
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+'use strict';
+
+// ----- Storage -----
+const STORAGE_KEY = 'dantawang_records_v1';
+let records = [];
+let editingId = null;
+let currentPhotos = [];
+
+function loadRecords() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    records = raw ? JSON.parse(raw) : [];
+  } catch (e) {
+    records = [];
+  }
+}
+
+function saveRecords() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
+  } catch (e) {
+    toast('⚠️ 저장 용량 초과. 사진 수를 줄이거나 JSON 백업 후 삭제하세요.', 4000);
+  }
+}
+
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
+
+// ----- Toast -----
+function toast(msg, dur) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(t._h);
+  t._h = setTimeout(() => t.classList.remove('show'), dur || 2200);
+}
+
+// ----- Photo handling -----
+function addPhotoFiles(files) {
+  const arr = Array.from(files).filter(f => f.type.startsWith('image/'));
+  let done = 0;
+  if (arr.length === 0) return;
+  arr.forEach(file => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      currentPhotos.push({ id: uid(), data: e.target.result, name: file.name });
+      done++;
+      if (done === arr.length) renderPhotoPreview();
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+function renderPhotoPreview() {
+  const wrap = document.getElementById('photo-preview');
+  wrap.innerHTML = '';
+  currentPhotos.forEach(p => {
+    const item = document.createElement('div');
+    item.className = 'photo-item';
+    item.innerHTML = `
+      <img src="${p.data}" alt="${p.name}" onclick="openModal('${p.id}')" />
+      <button type="button" class="remove-photo" onclick="removePhoto('${p.id}')">✕</button>
+    `;
+    wrap.appendChild(item);
+  });
+}
+
+function removePhoto(id) {
+  currentPhotos = currentPhotos.filter(p => p.id !== id);
+  renderPhotoPreview();
+}
+
+function openModal(photoId) {
+  let photo = currentPhotos.find(p => p.id === photoId);
+  if (!photo) {
+    for (const r of records) {
+      if (r.photos) {
+        const m = r.photos.find(p => p.id === photoId);
+        if (m) { photo = m; break; }
+      }
+    }
+  }
+  if (photo) {
+    document.getElementById('modal-img').src = photo.data;
+    document.getElementById('image-modal').classList.add('active');
+  }
+}
+
+function closeModal() {
+  document.getElementById('image-modal').classList.remove('active');
+}
+
+// ----- Form -----
+document.getElementById('trade-form').addEventListener('submit', (e) => {
+  e.preventDefault();
+  const rec = {
+    id: editingId || uid(),
+    date: document.getElementById('f-date').value.trim(),
+    stock: document.getElementById('f-stock').value.trim(),
+    reason: document.getElementById('f-reason').value.trim(),
+    weight: document.getElementById('f-weight').value.trim(),
+    realized: document.getElementById('f-realized').value === '' ? null : Number(document.getElementById('f-realized').value),
+    buytime: document.getElementById('f-buytime').value.trim(),
+    action: document.getElementById('f-action').value.trim(),
+    etc: document.getElementById('f-etc').value.trim(),
+    photos: [...currentPhotos],
+    updatedAt: Date.now(),
+  };
+  if (editingId) {
+    const idx = records.findIndex(r => r.id === editingId);
+    if (idx >= 0) records[idx] = rec;
+    toast('✅ 수정되었습니다');
+  } else {
+    rec.createdAt = Date.now();
+    records.unshift(rec);
+    toast('✅ 기록이 추가되었습니다');
+  }
+  saveRecords();
+  resetForm();
+  renderRecords();
+});
+
+function resetForm() {
+  document.getElementById('trade-form').reset();
+  currentPhotos = [];
+  editingId = null;
+  renderPhotoPreview();
+  document.getElementById('form-mode-badge').textContent = '추가';
+  document.getElementById('submit-btn').textContent = '➕ 기록 추가';
+  document.getElementById('f-date').value = defaultDate();
+}
+
+function defaultDate() {
+  const d = new Date();
+  const yy = String(d.getFullYear()).slice(2);
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return `${yy}.${mm}.${dd}`;
+}
+
+function editRecord(id) {
+  const r = records.find(x => x.id === id);
+  if (!r) return;
+  editingId = id;
+  document.getElementById('f-date').value = r.date || '';
+  document.getElementById('f-stock').value = r.stock || '';
+  document.getElementById('f-reason').value = r.reason || '';
+  document.getElementById('f-weight').value = r.weight || '';
+  document.getElementById('f-realized').value = r.realized == null ? '' : r.realized;
+  document.getElementById('f-buytime').value = r.buytime || '';
+  document.getElementById('f-action').value = r.action || '';
+  document.getElementById('f-etc').value = r.etc || '';
+  currentPhotos = r.photos ? r.photos.map(p => ({...p})) : [];
+  renderPhotoPreview();
+  document.getElementById('form-mode-badge').textContent = '수정 중';
+  document.getElementById('submit-btn').textContent = '💾 수정 저장';
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function deleteRecord(id) {
+  if (!confirm('이 기록을 삭제하시겠습니까?')) return;
+  records = records.filter(r => r.id !== id);
+  saveRecords();
+  renderRecords();
+  toast('🗑 삭제되었습니다');
+}
+
+function clearAll() {
+  if (!confirm('전체 기록을 삭제합니다. 복구할 수 없습니다. 계속하시겠습니까?')) return;
+  if (!confirm('정말 전체 삭제하시겠습니까? (마지막 확인)')) return;
+  records = [];
+  saveRecords();
+  renderRecords();
+  toast('전체 삭제 완료');
+}
+
+// ----- Render -----
+function renderRecords() {
+  const q = document.getElementById('search-input').value.toLowerCase().trim();
+  const sort = document.getElementById('sort-select').value;
+  let list = records.slice();
+
+  if (q) {
+    list = list.filter(r => {
+      const hay = [r.stock, r.reason, r.action, r.etc, r.buytime, r.weight, r.date].join(' ').toLowerCase();
+      return hay.includes(q);
+    });
+  }
+
+  list.sort((a, b) => {
+    if (sort === 'date-desc') return (b.date || '').localeCompare(a.date || '');
+    if (sort === 'date-asc') return (a.date || '').localeCompare(b.date || '');
+    if (sort === 'realized-desc') return (b.realized || 0) - (a.realized || 0);
+    if (sort === 'realized-asc') return (a.realized || 0) - (b.realized || 0);
+    return 0;
+  });
+
+  const body = document.getElementById('records-body');
+  body.innerHTML = '';
+
+  document.getElementById('record-count-badge').textContent = records.length + '건';
+  document.getElementById('stat-count').textContent = records.length;
+
+  const total = records.reduce((s, r) => s + (Number(r.realized) || 0), 0);
+  const totEl = document.getElementById('stat-total');
+  totEl.textContent = total.toLocaleString();
+  totEl.className = 'stat-value ' + (total > 0 ? 'plus' : total < 0 ? 'minus' : '');
+
+  const nonNull = records.filter(r => typeof r.realized === 'number');
+  if (nonNull.length > 0) {
+    const wins = nonNull.filter(r => r.realized > 0).length;
+    document.getElementById('stat-winrate').textContent = Math.round(wins / nonNull.length * 100) + '%';
+  } else {
+    document.getElementById('stat-winrate').textContent = '-';
+  }
+
+  if (list.length === 0) {
+    document.getElementById('empty-state').style.display = 'block';
+    return;
+  }
+  document.getElementById('empty-state').style.display = 'none';
+
+  list.forEach(r => {
+    const tr = document.createElement('tr');
+    const realizedCls = r.realized > 0 ? 'plus' : r.realized < 0 ? 'minus' : '';
+    const realizedText = (r.realized == null || r.realized === '') ? '-' : Number(r.realized).toLocaleString();
+    const photosHtml = (r.photos && r.photos.length > 0)
+      ? `<div class="photo-thumbs">${r.photos.map(p => `<img src="${p.data}" title="${escapeHtml(p.name || '')}" onclick="openModal('${p.id}')" />`).join('')}</div>`
+      : '';
+
+    tr.innerHTML = `
+      <td class="col-date" data-label="날짜">${escapeHtml(r.date || '')}</td>
+      <td class="col-stock" data-label="종목">${escapeHtml(r.stock || '')}</td>
+      <td data-label="발생시점/매매이유"><div class="cell-content">${escapeHtml(r.reason || '')}</div></td>
+      <td class="col-weight" data-label="비중">${escapeHtml(r.weight || '')}</td>
+      <td class="col-realized realized ${realizedCls}" data-label="실현(만)">${realizedText}</td>
+      <td class="col-time" data-label="매수판단시점"><div class="cell-content">${escapeHtml(r.buytime || '')}</div></td>
+      <td data-label="추가대응"><div class="cell-content">${escapeHtml(r.action || '')}</div></td>
+      <td data-label="기타/사진">
+        <div class="cell-content">${escapeHtml(r.etc || '')}</div>
+        ${photosHtml}
+      </td>
+      <td class="col-actions" data-label="관리">
+        <button class="btn btn-secondary" style="padding:5px 9px; font-size:12px;" onclick="editRecord('${r.id}')">✏️</button>
+        <button class="btn btn-danger" style="padding:5px 9px; font-size:12px;" onclick="deleteRecord('${r.id}')">🗑</button>
+      </td>
+    `;
+    body.appendChild(tr);
+  });
+}
+
+function escapeHtml(s) {
+  if (s == null) return '';
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+// ----- Excel Upload -----
+document.getElementById('excel-upload').addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const status = document.getElementById('upload-status');
+  status.textContent = '⏳ 읽는 중...';
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    try {
+      const data = new Uint8Array(ev.target.result);
+      const wb = XLSX.read(data, { type: 'array' });
+      let sheetName = wb.SheetNames.find(n => n.includes('단타왕') || n.includes('종베'));
+      if (!sheetName) {
+        const other = wb.SheetNames.filter(n => !['FT','FTSC','SC','SCN','Sheet1','Sheet2'].includes(n));
+        sheetName = other[0] || wb.SheetNames[0];
+      }
+      const ws = wb.Sheets[sheetName];
+      const rows = XLSX.utils.sheet_to_json(ws, { header: 1, raw: false, defval: '' });
+      if (rows.length < 2) {
+        status.textContent = '⚠️ 데이터가 없습니다.';
+        return;
+      }
+      let imported = 0;
+      let lastDate = '';
+      for (let i = 1; i < rows.length; i++) {
+        const row = rows[i];
+        if (!row || row.every(c => !c || String(c).trim() === '')) continue;
+        const date = String(row[0] || '').trim() || lastDate;
+        if (row[0]) lastDate = String(row[0]).trim();
+        const stock = String(row[1] || '').trim();
+        if (!stock) continue;
+        const reason = String(row[2] || '').trim();
+        const weight = String(row[3] || '').trim();
+        const realizedRaw = row[4];
+        let realized = null;
+        if (realizedRaw !== '' && realizedRaw != null) {
+          const n = Number(String(realizedRaw).replace(/,/g,''));
+          if (!isNaN(n)) realized = n;
+        }
+        const buytime = String(row[5] || '').trim();
+        const add1 = String(row[6] || '').trim();
+        const add2 = String(row[7] || '').trim();
+        const action = [add1, add2].filter(Boolean).join(' / ');
+        const etc = String(row[8] || '').trim();
+
+        records.push({
+          id: uid(),
+          date, stock, reason, weight, realized,
+          buytime, action, etc,
+          photos: [],
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+        });
+        imported++;
+      }
+      saveRecords();
+      renderRecords();
+      status.textContent = `✅ "${sheetName}" 시트에서 ${imported}건 가져옴`;
+      toast(`📥 ${imported}건 가져오기 완료`);
+    } catch (err) {
+      console.error(err);
+      status.textContent = '❌ 파일 읽기 실패: ' + err.message;
+    } finally {
+      e.target.value = '';
+    }
+  };
+  reader.readAsArrayBuffer(file);
+});
+
+// ----- Export to Excel -----
+function exportToExcel() {
+  if (records.length === 0) { toast('내보낼 기록이 없습니다'); return; }
+  const header = ['날짜(매도기준)','종목','발생시점 / 매매이유(뉴스)','비중','실현(만)','매수판단시점 / 매매 요약과정','추가대응(통합)','기타 Q'];
+  const rows = [header];
+  const sorted = records.slice().sort((a,b) => (a.date||'').localeCompare(b.date||''));
+  sorted.forEach(r => {
+    rows.push([
+      r.date || '', r.stock || '', r.reason || '', r.weight || '',
+      r.realized == null ? '' : r.realized,
+      r.buytime || '', r.action || '', r.etc || '',
+    ]);
+  });
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  ws['!cols'] = [{wch:12},{wch:16},{wch:50},{wch:10},{wch:10},{wch:22},{wch:40},{wch:30}];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, '단타왕 종베');
+  const today = new Date().toISOString().slice(0,10);
+  XLSX.writeFile(wb, `단타왕_종베_${today}.xlsx`);
+  toast('💾 엑셀 내보내기 완료');
+}
+
+// ----- JSON backup -----
+function exportJSON() {
+  if (records.length === 0) { toast('내보낼 기록이 없습니다'); return; }
+  const blob = new Blob([JSON.stringify(records, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `단타왕_종베_backup_${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  toast('📦 JSON 백업 완료');
+}
+
+document.getElementById('json-upload').addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    try {
+      const data = JSON.parse(ev.target.result);
+      if (!Array.isArray(data)) throw new Error('유효하지 않은 형식');
+      if (!confirm(`${data.length}건을 복원합니다. 기존 기록에 추가할까요?\n(취소하면 교체)`)) {
+        records = data;
+      } else {
+        records = data.concat(records);
+      }
+      saveRecords();
+      renderRecords();
+      toast('✅ 복원 완료');
+    } catch (err) {
+      toast('❌ JSON 복원 실패: ' + err.message);
+    } finally {
+      e.target.value = '';
+    }
+  };
+  reader.readAsText(file);
+});
+
+// ----- Photo UI events -----
+document.getElementById('f-photos').addEventListener('change', (e) => {
+  addPhotoFiles(e.target.files);
+  e.target.value = '';
+});
+document.getElementById('photo-drop').addEventListener('click', (e) => {
+  if (e.target.tagName !== 'INPUT') document.getElementById('f-photos').click();
+});
+['dragenter','dragover'].forEach(ev => {
+  document.getElementById('photo-drop').addEventListener(ev, (e) => {
+    e.preventDefault(); e.stopPropagation();
+    document.getElementById('photo-drop').classList.add('dragover');
+  });
+});
+['dragleave','drop'].forEach(ev => {
+  document.getElementById('photo-drop').addEventListener(ev, (e) => {
+    e.preventDefault(); e.stopPropagation();
+    document.getElementById('photo-drop').classList.remove('dragover');
+  });
+});
+document.getElementById('photo-drop').addEventListener('drop', (e) => {
+  if (e.dataTransfer.files.length) addPhotoFiles(e.dataTransfer.files);
+});
+// Paste support
+document.addEventListener('paste', (e) => {
+  const items = e.clipboardData && e.clipboardData.items;
+  if (!items) return;
+  const files = [];
+  for (const item of items) {
+    if (item.kind === 'file') {
+      const f = item.getAsFile();
+      if (f && f.type.startsWith('image/')) files.push(f);
+    }
+  }
+  if (files.length) {
+    addPhotoFiles(files);
+    toast('📷 클립보드 이미지 추가');
+  }
+});
+
+document.getElementById('search-input').addEventListener('input', renderRecords);
+document.getElementById('sort-select').addEventListener('change', renderRecords);
+
+// ----- Init -----
+loadRecords();
+document.getElementById('f-date').value = defaultDate();
+renderRecords();
+</script>
+</body>
+</html>
