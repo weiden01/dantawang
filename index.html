@@ -297,6 +297,114 @@
   }
   .toast.show { opacity: 1; transform: translateY(0); }
 
+  /* ===== Year / Month Navigation ===== */
+  .ym-nav {
+    background: #fff;
+    border-radius: 12px;
+    padding: 16px 20px 14px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.04);
+  }
+  .ym-nav-title {
+    font-size: 15px;
+    font-weight: 600;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #1d2433;
+  }
+  .ym-years {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 12px;
+  }
+  .ym-year-btn {
+    padding: 7px 20px;
+    border: 2px solid #e5e7eb;
+    border-radius: 22px;
+    background: #fff;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 700;
+    color: #374151;
+    transition: all 0.15s;
+    font-family: inherit;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .ym-year-btn:hover { border-color: #4f46e5; color: #4f46e5; background: #f5f5ff; }
+  .ym-year-btn.active { background: #4f46e5; border-color: #4f46e5; color: #fff; }
+  .ym-year-sum { font-size: 11px; font-weight: 500; opacity: 0.85; }
+  .ym-months {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .ym-month-btn {
+    padding: 7px 10px 6px;
+    border: 1.5px solid #e5e7eb;
+    border-radius: 10px;
+    background: #f9fafb;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+    color: #374151;
+    transition: all 0.15s;
+    font-family: inherit;
+    text-align: center;
+    min-width: 58px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    line-height: 1.2;
+  }
+  .ym-month-btn:hover { border-color: #4f46e5; background: #eef2ff; color: #4f46e5; }
+  .ym-month-sub {
+    font-size: 10px;
+    font-weight: 500;
+    display: block;
+  }
+  .ym-month-sub.plus { color: #d9534f; }
+  .ym-month-sub.minus { color: #1e5aa8; }
+  .ym-month-sub.neutral { color: #9ca3af; }
+  .ym-divider {
+    width: 1px;
+    background: #e5e7eb;
+    margin: 0 2px;
+    align-self: stretch;
+  }
+  .ym-empty { color: #9ca3af; font-size: 13px; padding: 6px 0; }
+
+  /* Month section divider in table */
+  tr.month-divider td {
+    background: linear-gradient(90deg, #eef2ff 0%, #f5f7ff 100%);
+    padding: 8px 14px;
+    font-weight: 700;
+    font-size: 13px;
+    color: #4f46e5;
+    border-top: 2px solid #c7d2fe;
+    border-bottom: 1px solid #e0e7ff;
+    position: sticky;
+    top: 0;
+  }
+  tr.month-divider .ms-sum {
+    font-size: 12px;
+    font-weight: 700;
+    margin-left: 10px;
+  }
+  tr.month-divider .ms-sum.plus { color: #d9534f; }
+  tr.month-divider .ms-sum.minus { color: #1e5aa8; }
+  tr.month-divider .ms-meta {
+    font-size: 11px;
+    color: #9ca3af;
+    font-weight: 400;
+    margin-left: 6px;
+  }
+
   @media (max-width: 768px) {
     body { padding: 12px; }
     .form-grid { grid-template-columns: 1fr 1fr; }
@@ -306,6 +414,7 @@
     tbody tr { display: block; padding: 12px; border-bottom: 1px solid #f1f2f6; }
     tbody td::before { content: attr(data-label) ": "; font-weight: 600; color: #6b7280; font-size: 11px; }
     .col-date, .col-stock, .col-realized, .col-weight, .col-time, .col-actions { width: auto; min-width: auto; }
+    .ym-month-btn { min-width: 50px; }
   }
 </style>
 </head>
@@ -405,6 +514,13 @@
     </form>
   </div>
 
+  <!-- Year / Month Navigation -->
+  <div class="ym-nav" id="ym-nav" style="display:none;">
+    <div class="ym-nav-title">📅 연/월 네비게이션</div>
+    <div class="ym-years" id="ym-years"></div>
+    <div class="ym-months" id="ym-months"></div>
+  </div>
+
   <!-- Records Table Card -->
   <div class="card">
     <h2>📋 매매 기록 목록 <span class="badge" id="record-count-badge">0건</span></h2>
@@ -457,6 +573,119 @@ const STORAGE_KEY = 'dantawang_records_v1';
 let records = [];
 let editingId = null;
 let currentPhotos = [];
+let activeNavYear = null;
+
+// ----- Year/Month Navigation -----
+const MONTH_NAMES = ['','1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
+
+function parseDateKey(dateStr) {
+  const parts = (dateStr || '').split('.');
+  if (parts.length < 2) return null;
+  const yy = parts[0].trim();
+  const mm = parts[1].trim().padStart(2, '0');
+  if (!yy || !mm || isNaN(Number(yy)) || isNaN(Number(mm))) return null;
+  const fullYear = (Number(yy) < 50 ? '20' : '19') + yy.padStart(2, '0');
+  return { year: fullYear, month: mm, key: `${fullYear}-${mm}` };
+}
+
+function getYearMonthStats() {
+  const groups = {};
+  records.forEach(r => {
+    const parsed = parseDateKey(r.date || '');
+    if (!parsed) return;
+    if (!groups[parsed.year]) groups[parsed.year] = {};
+    if (!groups[parsed.year][parsed.month]) {
+      groups[parsed.year][parsed.month] = { count: 0, sum: 0, wins: 0 };
+    }
+    const g = groups[parsed.year][parsed.month];
+    g.count++;
+    if (r.realized != null && r.realized !== '') {
+      g.sum += Number(r.realized) || 0;
+      if (Number(r.realized) > 0) g.wins++;
+    }
+  });
+  return groups;
+}
+
+function renderYearMonthNav() {
+  const groups = getYearMonthStats();
+  const years = Object.keys(groups).sort((a, b) => Number(b) - Number(a));
+  const navEl = document.getElementById('ym-nav');
+
+  if (years.length === 0) {
+    navEl.style.display = 'none';
+    return;
+  }
+  navEl.style.display = 'block';
+
+  if (!activeNavYear || !groups[activeNavYear]) {
+    activeNavYear = years[0];
+  }
+
+  // Year tabs
+  const yearsEl = document.getElementById('ym-years');
+  yearsEl.innerHTML = years.map(y => {
+    const yearRecs = groups[y];
+    const totalSum = Object.values(yearRecs).reduce((s, g) => s + g.sum, 0);
+    const totalCount = Object.values(yearRecs).reduce((s, g) => s + g.count, 0);
+    const sumCls = totalSum > 0 ? 'plus' : totalSum < 0 ? 'minus' : '';
+    const sumText = totalSum !== 0 ? (totalSum > 0 ? '+' : '') + totalSum.toLocaleString() + '만' : '';
+    return `<button class="ym-year-btn ${y === activeNavYear ? 'active' : ''}" onclick="selectNavYear('${y}')">
+      ${y}년
+      ${sumText ? `<span class="ym-year-sum">${sumText}</span>` : ''}
+      <span class="ym-year-sum" style="opacity:0.65">${totalCount}건</span>
+    </button>`;
+  }).join('');
+
+  // Month chips
+  const monthsEl = document.getElementById('ym-months');
+  const monthsData = groups[activeNavYear] || {};
+  const months = Object.keys(monthsData).sort();
+
+  if (months.length === 0) {
+    monthsEl.innerHTML = '<span class="ym-empty">데이터 없음</span>';
+    return;
+  }
+
+  monthsEl.innerHTML = months.map(m => {
+    const g = monthsData[m];
+    const sumCls = g.sum > 0 ? 'plus' : g.sum < 0 ? 'minus' : 'neutral';
+    const sumText = g.sum !== 0 ? (g.sum > 0 ? '+' : '') + g.sum.toLocaleString() : '±0';
+    return `<button class="ym-month-btn" onclick="scrollToSection('${activeNavYear}','${m}')">
+      <span>${MONTH_NAMES[Number(m)] || m + '월'}</span>
+      <span class="ym-month-sub ${sumCls}">${sumText}만</span>
+      <span class="ym-month-sub neutral">${g.count}건</span>
+    </button>`;
+  }).join('');
+}
+
+function selectNavYear(year) {
+  activeNavYear = year;
+  renderYearMonthNav();
+}
+
+function scrollToSection(year, month) {
+  const sortSel = document.getElementById('sort-select');
+  const searchInput = document.getElementById('search-input');
+  let needRender = false;
+  if (!sortSel.value.startsWith('date')) {
+    sortSel.value = 'date-desc';
+    needRender = true;
+  }
+  if (searchInput.value.trim() !== '') {
+    searchInput.value = '';
+    needRender = true;
+  }
+  if (needRender) {
+    renderRecords();
+  }
+  setTimeout(() => {
+    const anchor = document.getElementById(`section-${year}-${month}`);
+    if (anchor) {
+      anchor.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }, 60);
+}
 
 function loadRecords() {
   try {
@@ -667,11 +896,38 @@ function renderRecords() {
 
   if (list.length === 0) {
     document.getElementById('empty-state').style.display = 'block';
+    renderYearMonthNav();
     return;
   }
   document.getElementById('empty-state').style.display = 'none';
 
+  const isDateSort = sort.startsWith('date');
+  const allGroups = getYearMonthStats();
+  let currentGroupKey = null;
+
   list.forEach(r => {
+    // Insert month section divider when sorted by date
+    if (isDateSort) {
+      const parsed = parseDateKey(r.date || '');
+      const groupKey = parsed ? parsed.key : null;
+      if (groupKey && groupKey !== currentGroupKey) {
+        currentGroupKey = groupKey;
+        const [year, month] = groupKey.split('-');
+        const g = (allGroups[year] && allGroups[year][month]) ? allGroups[year][month] : { count: 0, sum: 0 };
+        const sumCls = g.sum > 0 ? 'plus' : g.sum < 0 ? 'minus' : '';
+        const sumText = g.sum !== 0 ? (g.sum > 0 ? '+' : '') + g.sum.toLocaleString() + '만' : '';
+        const divTr = document.createElement('tr');
+        divTr.className = 'month-divider';
+        divTr.id = `section-${groupKey}`;
+        divTr.innerHTML = `<td colspan="9">
+          📅 ${year}년 ${MONTH_NAMES[Number(month)] || month + '월'}
+          ${sumText ? `<span class="ms-sum ${sumCls}">${sumText}</span>` : ''}
+          <span class="ms-meta">${g.count}건</span>
+        </td>`;
+        body.appendChild(divTr);
+      }
+    }
+
     const tr = document.createElement('tr');
     const realizedCls = r.realized > 0 ? 'plus' : r.realized < 0 ? 'minus' : '';
     const realizedText = (r.realized == null || r.realized === '') ? '-' : Number(r.realized).toLocaleString();
@@ -698,6 +954,8 @@ function renderRecords() {
     `;
     body.appendChild(tr);
   });
+
+  renderYearMonthNav();
 }
 
 function escapeHtml(s) {
